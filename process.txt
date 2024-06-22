@@ -1,0 +1,99 @@
+open anaconda prompt
+cd project path
+code . which opens vs code instance
+now open terminal in vscode
+creating new environment
+conda create -p venv python==3.8 -y
+cls  clear screen
+conda activate venv/
+
+next we need to clone this repo and sync with github
+
+
+this ode would be available on GitHub once you create repo:
+echo "# data_science_project" >> README.md
+git init
+git add README.md
+
+now use git config user.email "email"
+git config user.name "username"
+
+git commit -m "first commit"
+
+
+now we need to push this file
+
+git branch -M main
+git remote add origin https://github.com/nitesh-wadhavinde/data_science_project.git
+git push -u origin main
+
+
+goto GitHub and create a new file with name .gitignore hen choose python and commit changes
+
+now to get updated stuff on remote use git pull
+
+now in vscode create a new file setup.py and requirements.txt
+with help of setup.py we will be able to build our application as a package and even deploy in pypi
+
+in setup.py:
+from setuptools import find_packages,setup
+from typing import List
+def get_requirements(file_path:str)->List[str]:
+	'''
+	this func will return list of requirements
+	'''
+	requirements=[]
+	with open(file_path) as file_obj:
+		requirements=file_obj.readlines()
+		requirements=[req.replace("\n","") for req in requirements]
+	
+
+setup(
+name='mlproject',
+version='0.0.1',
+author='Nitesh',
+author_email='niteshwadhavinde.nw@gmail.com',
+packages=find_packages(),
+install_requires=get_requirements('requirements.txt')
+)
+
+
+
+for setup.py how will it be able to able to find packages and all
+for this what we do is create a src folder with __init__.py
+
+
+so when we are trying to install all in requirements.txt it should run setup.py
+to that we add 
+-e . in requirements.txt 
+
+now to make sure that the lit we made before removes this -e .
+we add below condition o our function get_req
+if '-e .' in requirements:
+ requirements.remove('-e .')
+
+
+
+2.Src folder with package
+pip install -r requirements.txt
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
