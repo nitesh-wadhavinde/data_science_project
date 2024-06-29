@@ -158,6 +158,238 @@ logging.basicConfig(
 
 git add .
 git commit -m "logging exception"
+###############################################################################33
+
+
+
+
+now we will focus on  EDA
+In the context of data science, EDA stands for Exploratory Data Analysis. EDA is an approach to analyzing datasets to summarize their main characteristics, often using visual methods. Here are some key points about EDA:
+
+Understanding Data: EDA helps in understanding the underlying patterns, structures, and anomalies in the data. This includes identifying the distribution of variables, relationships between variables, and detecting outliers.
+
+Initial Insights: It provides initial insights that guide the selection of appropriate modeling techniques and the subsequent steps in the data analysis process.
+
+Data Cleaning: EDA is crucial for data cleaning. It helps in identifying missing values, erroneous data, and other issues that need to be addressed before modeling.
+
+Visualization: Visualization tools are extensively used in EDA. Common visualizations include histograms, box plots, scatter plots, and bar charts, which help in revealing the data's characteristics and relationships.
+
+Statistical Analysis: Basic statistical techniques are often employed during EDA. This can include calculating measures of central tendency (mean, median), dispersion (variance, standard deviation), and correlations.
+
+Hypothesis Generation: EDA can generate hypotheses about the data. For instance, it may suggest potential predictors for a target variable or reveal patterns that require further investigation.
+
+Steps in EDA
+Data Collection: Gathering the data from various sources.
+Data Cleaning: Handling missing values, removing duplicates, correcting errors.
+Data Profiling: Generating summary statistics and visualizations to understand the data distribution and relationships.
+Visualization: Using charts and plots to explore data visually.
+Hypothesis Testing: Formulating and testing hypotheses based on the observed data patterns.
+Common EDA Techniques
+Summary Statistics: Mean, median, mode, standard deviation, quartiles.
+Visualizations:
+Histograms: To understand the distribution of a single variable.
+Box Plots: To visualize the distribution and identify outliers.
+Scatter Plots: To explore relationships between two variables.
+Correlation Matrices: To examine relationships among multiple variables.
+Bar Charts: To compare categorical data.
+Data Transformation: Normalization, standardization, log transformations to handle skewed data.
+Tools and Libraries for EDA
+Python: Libraries like Pandas, Matplotlib, Seaborn, and Plotly.
+R: Libraries like ggplot2, dplyr, and tidyr.
+Specialized Tools: Tableau, Power BI for more advanced visual analysis
+
+
+
+we will work on data and jupyter notebook code
+now below are EDA we did:
+1. convert to dataframe
+2.see shape of dataset
+3. see dataset info if available from website
+4. Data Checks to perform
+
+- Check Missing values 
+df.isna().sum()
+
+- Check Duplicates
+df.duplicated().sum()
+
+
+- Check data type
+df.info()
+
+- Check the number of unique values of each column
+df.nunique()
+
+- Check statistics of data set
+df.describe()
+
+- Check various categories present in the different categorical column
+
+df.head()
+
+print("Categories in 'gender' variable:     ",end=" " )
+print(df['gender'].unique())
+
+- numerical vs categorical
+numeric_features = [feature for feature in df.columns if df[feature].dtype != 'O']
+categorical_features = [feature for feature in df.columns if df[feature].dtype == 'O']
+
+
+Adding columns for "Total Score" and "Average"
+
+df['total score'] = df['math_score'] + df['reading_score'] + df['writing_score']
+df['average'] = df['total score']/3
+df.head()
+
+get insights
+
+
+Now Data Visualization
+
+-Histogram and KDE
+fig, axs = plt.subplots(1, 2, figsize=(15, 7))
+plt.subplot(121)
+sns.histplot(data=df,x='average',bins=30,kde=True,color='g')
+plt.subplot(122)
+sns.histplot(data=df,x='average',kde=True,hue='gender')
+plt.show()
+
+
+##############################################################################################################
+
+Now we focus on building model
+
+okay now that we are into creating model, we need to make sure all libraries are installed
+so goto our requirements.txt and add all libraries and then do this:
+pip install -r requirements.txt
+
+
+once we have imported all libraries now convert csv to df
+and df.head()
+
+now figure out what do you want to predict and what features you want, basically determine X and Y
+
+
+
+one option is to use all columns in X other than target column
+
+X=df.drop(columns=['math_score'],axis=1)
+
+
+y = df['math_score']
+
+write code to find out how many categories or types of values we have in each columnvise
+
+
+
+next step is super important
+COLUMN TRANSFORMATION
+
+1. we need to perform one hot encoding for categorical column
+2. once all features are getting converted to numerical we will do standardization and normalization
+
+This should be done in form of pipeline
+
+
+num_features= X.select_dtypes(exclude="object").columns
+
+cat_features= X.select_dtypes(include="object").columns
+
+
+now its time for transformation
+
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+
+ColumnTransformer what this does is sequentially applies transformation columns
+
+create objects of these transformations:
+numeric_transformer = StandardScaler()
+oh_transformer = OneHotEncoder()
+
+
+create pipeline for sequential tranformation
+preprocessor = ColumnTransformer(
+    [
+        ("OneHotEncoder", oh_transformer, cat_features),
+         ("StandardScaler", numeric_transformer, num_features),        
+    ]
+)
+
+
+now this preprocessor can be used to fit_transform on any kind of dataset
+X = preprocessor.fit_transform(X)
+
+after this X is not dataframe any more and is numpy array so we need to convert it to df to access X.head()
+
+
+now we will create a function which will be used for evaluation of our model this function will have all kinds of error measurements:
+
+def evaluate_model(true,predicted):
+ mae=mean_absolute_error(true,predicted)
+ mse=mean_squared_error(true,predicted)
+ rmse=np.sqrt(mse)
+ r2_square=r2_score(true,predicted)
+ return mae,mse,rmse,r2_square
+
+
+
+
+now we create a list of models
+models = {
+    "Linear Regression": LinearRegression(),
+    "Lasso": Lasso(),
+    "Ridge": Ridge(),
+    "K-Neighbors Regressor": KNeighborsRegressor(),
+    "Decision Tree": DecisionTreeRegressor(),
+    "Random Forest Regressor": RandomForestRegressor(),
+    "XGBRegressor": XGBRegressor(), 
+    "CatBoosting Regressor": CatBoostRegressor(verbose=False),
+    "AdaBoost Regressor": AdaBoostRegressor()
+}
+
+OKAY SO BELOW STUFF IS TOUGH SO USE CHATGPT TO UNDERSTAND THIS: 
+model_list = []
+r2_list =[]
+
+for i in range(len(list(models))):
+    model = list(models.values())[i]
+    model.fit(X_train, y_train) # Train model
+
+    # Make predictions
+    y_train_pred = model.predict(X_train)
+    y_test_pred = model.predict(X_test)
+    
+    # Evaluate Train and Test dataset
+    model_train_mae , model_train_rmse, model_train_r2 = evaluate_model(y_train, y_train_pred)
+
+    model_test_mae , model_test_rmse, model_test_r2 = evaluate_model(y_test, y_test_pred)
+
+    
+    print(list(models.keys())[i])
+    model_list.append(list(models.keys())[i])
+    
+    print('Model performance for Training set')
+    print("- Root Mean Squared Error: {:.4f}".format(model_train_rmse))
+    print("- Mean Absolute Error: {:.4f}".format(model_train_mae))
+    print("- R2 Score: {:.4f}".format(model_train_r2))
+
+    print('----------------------------------')
+    
+    print('Model performance for Test set')
+    print("- Root Mean Squared Error: {:.4f}".format(model_test_rmse))
+    print("- Mean Absolute Error: {:.4f}".format(model_test_mae))
+    print("- R2 Score: {:.4f}".format(model_test_r2))
+    r2_list.append(model_test_r2)
+    
+    print('='*35)
+    print('\n')
+
+
+
+
+
+
 
 
 
