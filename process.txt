@@ -387,14 +387,211 @@ for i in range(len(list(models))):
 
 
 
+git add .
+
+git status
+git commit -m "eda"
+
+git oush -u orgin main
+
+#######################################################################################
+This was just a way to create model in notebook
+so we need to write modular code now in src,utils
+
+######################################################################
+
+comes the data ingestion part
+
+aim is to read data from a data source and split data 
+
+import os
+import sys
+
+reason we use these is because of custom exception
+now to import the custom exception we made use below line
+
+from src.exception import CustomException
+
+from src.logger import logging
+
+to work with dataframe
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from dataclasses import dataclass
+
+
+
+Inputs for the Data Ingestion Component
+When setting up this data ingestion component, you need to provide it with some important information (inputs). These inputs are basically instructions on where to store different kinds of data
+
+so these kind of component is done using separate class
 
 
 
 
+use decorator @dataclass to directly define class variable
+
+
+@dataclass
+class DataIngestionConfig:
+	train_data_path:str= os.path.join('artifacts',"train.csv")
+
+
+@dataclass Decorator
+The @dataclass decorator is a feature in Python that automatically generates special methods for classes, like __init__ (constructor), __repr__, and __eq__. It makes it easier to create classes that are mainly used to store data.
+
+Class Definition
+The class DataIngestionConfig is defined using the @dataclass decorator.
+
+python
+Copy code
+@dataclass
+class DataIngestionConfig:
+Class Attribute
+Within this class, there's an attribute called train_data_path. Here's what it means:
+
+python
+Copy code
+train_data_path: str = os.path.join('artifacts', "train.csv")
+train_data_path: This is the name of the attribute. It will store the path where the training data file should be saved.
+: str: This specifies that train_data_path should be a string.
+os.path.join('artifacts', "train.csv"): This part sets a default value for train_data_path.
+os.path.join Function
+The os.path.join function is used to create a file path that works on any operating system (Windows, macOS, Linux, etc.). It joins the directory 'artifacts' with the filename "train.csv" to create the full path 'artifacts/train.csv'.
+
+Default Value
+By setting train_data_path to os.path.join('artifacts', "train.csv"), you're specifying that, unless told otherwise, the training data should be saved in the 'artifacts' directory with the filename "train.csv".
+
+Putting It All Together
+When you use the DataIngestionConfig class, it will automatically have an attribute train_data_path set to 'artifacts/train.csv' unless you provide a different path when creating an instance of the class.
+
+now we have dataingestion class
+if we have just variables its better to use @dataclass
+else if we have methods than use init
+
+
+Sure! Let's break down the code step by step and explain each part of it:
+
+### Class Definition and Initialization
+
+```python
+class DataIngestion:
+    def __init__(self) -> None:
+        self.ingestion_config = DataIngestionConfig()
+```
+
+- **`class DataIngestion`**: This defines a class named `DataIngestion`.
+- **`__init__(self) -> None`**: This is the constructor method that initializes an instance of the class. It takes `self` as an argument and returns `None`.
+- **`self.ingestion_config = DataIngestionConfig()`**: Within the constructor, an instance of `DataIngestionConfig` is created and assigned to the attribute `ingestion_config`. This means that `DataIngestion` now has access to the paths defined in `DataIngestionConfig`.
+
+### Method for Data Ingestion
+
+```python
+def initiate_data_ingestion(self):
+    logging.info("entered the data ingestion method")
+```
+
+- **`def initiate_data_ingestion(self)`**: This defines a method named `initiate_data_ingestion` within the `DataIngestion` class. It takes `self` as an argument.
+- **`logging.info("entered the data ingestion method")`**: This logs an informational message indicating that the data ingestion method has been entered.
+
+### Try Block for Error Handling
+
+```python
+    try:
+        df = pd.read_csv('notebook/data/stud.csv')
+        logging.info("read the dataset as dataframe")
+```
+
+- **`try`**: This starts a try block to handle exceptions that may occur during the data ingestion process.
+- **`df = pd.read_csv('notebook/data/stud.csv')`**: This reads a CSV file located at `'notebook/data/stud.csv'` into a Pandas DataFrame named `df`.
+- **`logging.info("read the dataset as dataframe")`**: This logs an informational message indicating that the dataset has been successfully read into a DataFrame.
+
+### Directory Creation and Saving Raw Data
+
+```python
+        os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
+        df.to_csv(self.ingestion_config.raw_data_path, index=False, header=True)
+```
+
+- **`os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)`**: This creates the directory where the training data will be saved if it doesn't already exist. The `exist_ok=True` parameter prevents an error if the directory already exists.
+- **`df.to_csv(self.ingestion_config.raw_data_path, index=False, header=True)`**: This saves the DataFrame `df` to a CSV file at the path specified by `self.ingestion_config.raw_data_path`. It does not write row indices (`index=False`) and includes column headers (`header=True`).
+
+### Train-Test Split and Saving the Data
+
+```python
+        logging.info("traintest split initiated")
+        train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+        train_set.to_csv(self.ingestion_config.train_data_path, index=False, header=True)
+        test_set.to_csv(self.ingestion_config.test_data_path, index=False, header=True)
+        logging.info("ingestion complete")
+        pass
+```
+
+- **`logging.info("traintest split initiated")`**: This logs an informational message indicating that the train-test split process has started.
+- **`train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)`**: This splits the DataFrame `df` into training and test sets. `test_size=0.2` indicates that 20% of the data will be used for testing, and `random_state=42` ensures reproducibility.
+- **`train_set.to_csv(self.ingestion_config.train_data_path, index=False, header=True)`**: This saves the training set to a CSV file at the path specified by `self.ingestion_config.train_data_path`.
+- **`test_set.to_csv(self.ingestion_config.test_data_path, index=False, header=True)`**: This saves the test set to a CSV file at the path specified by `self.ingestion_config.test_data_path`.
+- **`logging.info("ingestion complete")`**: This logs an informational message indicating that the data ingestion process is complete.
+- **`pass`**: This is a placeholder that does nothing. It can be omitted.
+
+### Exception Handling
+
+```python
+    except:
+        pass
+```
+
+- **`except`**: This catches any exceptions that occur within the try block.
+- **`pass`**: This is a placeholder that does nothing. In a real-world scenario, you should handle the exception appropriately, such as logging an error message.
+
+### Summary
+
+The `DataIngestion` class is designed to handle the data ingestion process, which includes:
+
+1. Initializing with default paths for saving data.
+2. Reading a raw dataset from a CSV file.
+3. Creating necessary directories for saving data.
+4. Saving the raw data to a specified path.
+5. Splitting the dataset into training and test sets.
+6. Saving the training and test sets to specified paths.
+7. Logging progress throughout the process.
+
+Here’s a simplified summary:
+
+- **Initialization**: Set up default paths for data storage.
+- **Data Ingestion**: Read a dataset, create directories, save raw data, split into training and test sets, save these sets, and log each step. Handle any errors that occur.
+
+This class and method organize and manage the data ingestion process, ensuring that data is properly read, split, and saved for further analysis or model training.
+
+
+now we return the paths as we will need those in data transformation
+
+            return(
+                self.ingestion_config.train_data_path,
+                self.ingestion_config.test_data_path
+            )
+
+        except Exception as e:
+            raise CustomException(e,sys)
 
 
 
 
+now we will initiate this
+if__name__=="__main__":
+
+we will create data ingestion object
+if__name__=="__main__":
+	obj=DataIngestion()
+	obj.initiate_data_ingestion()
+
+
+now execute it:
+python src/components/data_ingestion.py
+
+
+data ingestion complete and artifacts folder got created
 
 
 
