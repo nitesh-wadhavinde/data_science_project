@@ -594,4 +594,306 @@ python src/components/data_ingestion.py
 data ingestion complete and artifacts folder got created
 
 
+---------------------------------------------------------------------------------------------------
+
+now we will do data transformation
+
+we will read data from  data ingestion and then transform data according to numerical or categorical columns
+
+main aim of data transformation is feature engineering data cleaning
+
+from sklearn.compose import ColumnTransformer
+
+for creating a pipeline to sequenstially apply on hot encoding, standard scaling, etc
+
+to tackle with missing values :
+from sklearn.impute import SimpleImputer
+
+
+
+to create pipeline:
+from sklearn.pipeline import Pipeline
+
+
+
+now to handle exception we need to import custom exception
+
+from src.exception import CustomExxception
+
+
+
+
+as in dataingestion config we created it to give input to dataingestion component , we need to do the same with data transformation component
+
+now lets say we need to save model as pickle file, for that we need obj path:
+
+class DataTranformationConfig:
+    preprocessor_obj_file_path=os.path.join('artifacts',"preprocessor.pkl")
+
+
+
+now main class:
+
+class DataTransformation:
+    def __init__(self):
+        self.data_transformation_config=DataTranformationConfig()
+
+
+data_transformation_config this will have preprocessor_obj_file_pat
+
+now new function:
+def get_data_transformer_object(self):
+
+purpose of this is to save pickle files responsible for converting categorical to numerical, one hot encoding etc
+
+def get_data_transformer_object(self):
+        try:
+            numerical_columns = ["writing_score", "reading_score"]
+            categorical_columns = [
+                "gender",
+                "race_ethnicity",
+                "parental_level_of_education",
+                "lunch",
+                "test_preparation_course",
+            ]
+        except:
+            pass
+
+
+
+now first we focus on missing values
+
+
+            num_pipeline=Pipeline(
+
+                steps=[
+
+                    ("imputer",SimpleImputer(strategy="median")),
+                    ("scaler",StandardScaler())
+                ]
+            )
+ cat_pipeline=Pipeline(
+                steps=[
+
+                    ("imputer",SimpleImputer(strategy="most_frequent")),
+                    ("one_hot_encoder",OneHotEncoder()),
+                    ("scaler",StandardScaler())
+                ]
+
+
+
+            )
+
+
+now to put them into one pipeline:
+
+            preprocessor=ColumnTransformer(
+
+                [
+                    ("num_pipeline",num_pipeline, numerical_columns),
+                    ("cat_pipeline",cat_pipeline,categorical_columns)
+                ]
+
+
+            )
+
+entire data transformation code:
+import sys
+from dataclasses import dataclass
+import os
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder,StandardScaler
+from src.utils import save_object
+from src.exception import CustomException
+from src.logger import logging
+
+@dataclass
+class DataTranformationConfig:
+    preprocessor_obj_file_path=os.path.join('artifacts',"preprocessor.pkl")
+
+
+
+
+class DataTransformation:
+    def __init__(self):
+        self.data_transformation_config=DataTranformationConfig()
+
+    def get_data_transformer_object(self):
+        try:
+            numerical_columns = ["writing_score", "reading_score"]
+            categorical_columns = [
+                "gender",
+                "race_ethnicity",
+                "parental_level_of_education",
+                "lunch",
+                "test_preparation_course",
+            ]
+
+
+            num_pipeline=Pipeline(
+
+                steps=[
+
+                    ("imputer",SimpleImputer(strategy="median")),
+                    ("scaler",StandardScaler())
+                ]
+            )
+
+            cat_pipeline=Pipeline(
+                steps=[
+
+                    ("imputer",SimpleImputer(strategy="most_frequent")),
+                    ("one_hot_encoder",OneHotEncoder()),
+                    ("scaler",StandardScaler())
+                ]
+
+
+
+            )
+
+            logging.info("categorical columns encoding and numerical columns scaling completed")
+ 
+            preprocessor=ColumnTransformer(
+
+                [
+                    ("num_pipeline",num_pipeline, numerical_columns),
+                    ("cat_pipeline",cat_pipeline,categorical_columns)
+                ]
+
+
+            )
+
+            return preprocessor
+
+
+        except:
+            raise CustomException(e, sys)
+        
+
+
+
+    def initiate_data_transformation(self,train_path,test_path):
+
+        try:
+            train_df=pd.read_csv(train_path),
+            test_df=pd.read_csv(test_path)
+
+            logging.info("read train and test data")
+
+
+
+            preprocessing_obj=self.get_data_transformer_object()
+
+            target_column_name="math_score"
+            numerical_columns=["writing_score","reading_score"]
+
+            input_feature_train_df=train_df.drop(columns=[target_column_name],axis=1)
+            target_feature_train_df=train_df[target_column_name]
+
+            input_feature_test_df=test_df.drop(columns=[target_column_name],axis=1)
+            target_feature_test_df=test_df[target_column_name]
+
+
+
+            logging.info("applying preprocessing object on training df and test df")
+
+
+
+            input_feature_train_arr=preprocessing_obj.fit_transform(input_feature_train_df)
+            input_feature_test_arr=preprocessing_obj.fit_transform(input_feature_test_df)
+
+            train_arr= np.c_[
+
+                input_feature_train_arr,np.array(target_feature_train_df)
+            ]
+
+            test_arr= np.c_[
+
+                input_feature_test_arr,np.array(target_feature_test_df)
+            ]
+
+            logging.info("saved preprocessing object for both training and test")
+
+            save_object(
+                file_path=self.data_transformation_config.preprocessor_obj_file_path,
+                object=preprocessing_obj
+            )
+#we will define this save_object funtion in utils.py
+            return(
+                train_arr,
+                test_arr,
+                self.data_transformation_config.preprocessor_obj_file_path
+            )
+        except:
+            pass
+
+
+
+
+
+
+
+
+now we need to create save_object in utils.py:
+import os
+import sys
+import numpy as np
+import pandas as pd
+import dill
+def save_object(file_path,obj):
+    try:
+        dir_path=os.path.dirname(file_path)
+        os.makedirs(dir_path, exist_ok=True)
+
+        with open(file_path, "wb") as file_obj:
+            dill.dump(obj, file_obj)
+    except:
+        raise CustomException(e, sys)
+
+
+
+now we need to do modification in data ingestion to use data transformation:
+if __name__=="__main__":
+    obj=DataIngestion()
+    train_data,test_data=obj.initiate_data_ingestion()
+
+    data_transformation=DataTransformation()
+    data_transformation.initiate_data_transformation(train_data,test_data)
+
+
+now run:
+python src/components/data_ingestion.py
+
+preprocessor.pkl will get created in artifacts folder
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
