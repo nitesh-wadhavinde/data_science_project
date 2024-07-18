@@ -1203,3 +1203,417 @@ finally we got r score:
 PS C:\Users\Nitesh\iitRopar\CDPC\DataScientistInterview\dataScienceProject> python src/components/data_ingestion.py
 Random Forest
 0.8934170877396435
+
+
+
+git add .
+git status
+git commit -m "model training done"
+git push -u origin main
+
+---------------------------------------------------------------------------------------
+
+now its time to work on prediction pipeline
+
+
+why prediction pipeline is important?
+
+we will try to create web application which will be interacting with pickle files we created.
+so in web appln we will take input for our model that is student performance values and then feed it to our model.pkl
+
+First of all we will create a app.py, we will be using flask to deploy.
+
+
+
+
+we will need to make sure we again follow the modular pipeline structure and then develop it
+
+app.py:
+from flask import Flask,request,render_template
+import numpy as np
+import pandas as pd
+
+from sklearn.preprocessing import StandardScaler
+
+application=Flask(__name__)
+
+app=application
+##route for a home page
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+Explanation:
+
+Flask(__name__): Creates an instance of the Flask class. __name__ is passed as a parameter to tell Flask where to find the root path of the application.
+application is assigned to app for convenience.
+
+@app.route('/'): This decorator creates a route for the home page (i.e., the root URL of the application). When a user navigates to this URL, the index function is called.
+def index(): Defines the index function that will handle requests to the root URL.
+return render_template('index.html'): Renders and returns the index.html template. This means that when a user navigates to the root URL, they will see the contents of the index.html file.
+How It Works
+Initialization: The Flask application is created and initialized with application = Flask(__name__).
+Routing: The @app.route('/') decorator defines a route for the root URL. When a user accesses the root URL, the index function is called.
+Rendering: The index function renders the index.html template, which is sent to the user's browser.
+
+
+
+
+Create templates folder where we will have index.html:
+<h1>Welcome to the Home Page of Data Science End to End project</h1>
+remember we are not that interested in UI part as it is work of frontend engineer 
+
+back to app.py:
+@app.route('/predictdata',methods=['GET','POST'])
+def predict_datapoint():
+    if request.method=='GET':
+        return render_template('home.html')
+    else:
+        pass
+
+here we will get our data and then predict our data
+now what this home.html have is 
+simple data fields we need to provide the model to do the prediction
+
+now in else section we will have post which we will get back to later
+
+first lets create home.html:
+<html>
+<body>
+    <div class="login">
+       <h1>Student Exam Performance Indicator</h1>
+   
+       <form action="{{ url_for('predict_datapoint')}}" method="post">
+        <h1>
+            <legend>Student Exam Performance Prediction</legend>
+        </h1>
+        <div class="mb-3">
+            <label class="form-label">Gender</label>
+            <select class="form-control" name="gender" placeholder="Enter you Gender" required>
+                <option class="placeholder" selected disabled value="">Select your Gender</option>
+                <option value="male">
+                    Male
+                </option>
+                <option value="female">
+                    Female
+                </option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Race or Ethnicity</label>
+            <select class="form-control" name="ethnicity" placeholder="Enter you ethnicity" required>
+                <option class="placeholder" selected disabled value="">Select Ethnicity</option>
+                <option value="group A">
+                    Group A
+                </option>
+                <option value="group B">
+                    Group B
+                </option>
+                <option value="group C">
+                    Group C
+                </option>
+                <option value="group D">
+                    Group D
+                </option>
+                <option value="group E">
+                    Group E
+                </option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Parental Level of Education</label>
+            <select class="form-control" name="parental_level_of_education"
+                placeholder="Enter you Parent Education" required>
+                <option class="placeholder" selected disabled value="">Select Parent Education</option>
+                <option value="associate's degree">
+                    associate's degree
+                </option>
+                <option value="bachelor's degree">
+                    bachelor's degree
+                </option>
+                <option value="high school">
+                    high school
+                </option>
+                <option value="master's degree">
+                    master's degree
+                </option>
+                <option value="some college">
+                    some college
+                </option>
+                <option value="some high school">
+                    some high school
+                </option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Lunch Type</label>
+            <select class="form-control" name="lunch" placeholder="Enter you Lunch" required>
+                <option class="placeholder" selected disabled value="">Select Lunch Type</option>
+                <option value="free/reduced">
+                    free/reduced
+                </option>
+                <option value="standard">
+                    standard
+                </option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Test preparation Course</label>
+            <select class="form-control" name="test_preparation_course" placeholder="Enter you Course"
+                required>
+                <option class="placeholder" selected disabled value="">Select Test_course</option>
+                <option value="none">
+                    None
+                </option>
+                <option value="completed">
+                    Completed
+                </option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Writing Score out of 100</label>
+            <input class="form-control" type="number" name="reading_score"
+                placeholder="Enter your Reading score" min='0' max='100' />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Reading Score out of 100</label>
+            <input class="form-control" type="number" name="writing_score"
+                placeholder="Enter your Reading Score" min='0' max='100' />
+        </div>
+        <div class="mb-3">
+            <input class="btn btn-primary" type="submit" value="Predict your Maths Score" required />
+        </div>
+    </form>
+    <h2>
+       THE  prediction is {{results}}
+    </h2>
+   <body>
+</html>
+
+
+
+
+back to else part of app.py:
+
+suppose its a post request
+we will start creating a data, now for creating data we will create our own custom class
+
+
+
+
+now this same class will be created in predict pipeline
+predict_pipeline.py:
+import sys
+import pandas as pd
+from src.exception import CustomException
+from src.utils import load_object
+
+#for initiation
+
+class PredictPipeline:
+    def __init__(self):
+        pass
+
+
+class CustomData:
+
+
+this class will be responsible for mapping all the inputs we are giving in html to the
+backend
+
+we know the features we are gonna use so:
+class CustomData:
+    def __init__(self,gender: str,
+        race_ethnicity: str,
+        parental_level_of_education,
+        lunch: str,
+        test_preparation_course: str,
+        reading_score: int,
+        writing_score: int):
+        pass
+
+
+now we will create a variable self to access all variables
+and assign them values coming from home.html
+self.gender = gender
+
+        self.race_ethnicity = race_ethnicity
+
+        self.parental_level_of_education = parental_level_of_education
+
+        self.lunch = lunch
+
+        self.test_preparation_course = test_preparation_course
+
+        self.reading_score = reading_score
+
+        self.writing_score = writing_score
+
+
+we need to convert this to dataframe as it would get fed to model so for that:
+def get_data_as_data_frame(self):
+    try:
+        #we will create a dictionary here
+        custom_data_input_dict = {
+                "gender": [self.gender],
+                "race_ethnicity": [self.race_ethnicity],
+                "parental_level_of_education": [self.parental_level_of_education],
+                "lunch": [self.lunch],
+                "test_preparation_course": [self.test_preparation_course],
+                "reading_score": [self.reading_score],
+                "writing_score": [self.writing_score],
+            }
+        
+        return pd.DataFrame(custom_data_input_dict)
+    except Exception as e:
+        raise CustomException(e,sys)
+
+
+
+
+now inside the class PredictPipeline we will create another function named predict
+which will take in features
+we will load model and preprocessor pkl files here
+
+class PredictPipeline:
+    def __init__(self):
+        pass
+
+    def predict(self,features):
+        model_path='artifacts\model.pkl'
+        preprocessor_path='artifacts\preprocessor.pkl'
+        model=load_object(file_path=model_path)
+        preprocessor=load_object(file_path=preprocessor_path)
+we need to now scale the data and then provide that scaled data to our model:
+
+class PredictPipeline:
+    def __init__(self):
+        pass
+
+    def predict(self,features):
+        model_path='artifacts\model.pkl'
+        preprocessor_path='artifacts\preprocessor.pkl'
+        model=load_object(file_path=model_path)
+        preprocessor=load_object(file_path=preprocessor_path)
+
+        data_scaled=preprocessor.transform(features)
+        preds=model.predict(data_scaled)
+        return preds
+
+
+now we need to create this load_object which needs to be created in utils.py
+
+def load_object(file_path):
+    try:
+        with open(file_path, "rb") as file_obj:
+            return dill.load(file_obj)
+    except Exception as e:
+        raise CustomException(e,sys)
+
+
+
+
+
+
+
+
+
+Now back to app.py we will be calling the custom data:
+
+
+@app.route('/predictdata',methods=['GET','POST'])
+def predict_datapoint():
+    if request.method=='GET':
+        return render_template('home.html')
+    else:
+        data=CustomData(gender=request.form.get('gender'),
+            race_ethnicity=request.form.get('ethnicity'),
+            parental_level_of_education=request.form.get('parental_level_of_education'),
+            lunch=request.form.get('lunch'),
+            test_preparation_course=request.form.get('test_preparation_course'),
+            reading_score=float(request.form.get('writing_score')),
+            writing_score=float(request.form.get('reading_score')))
+
+this above data we will get from html post
+        
+        pred_df=data.get_data_as_data_frame()
+        print(pred_df)
+
+        predict_pipeline=PredictPipeline()
+        results=predict_pipeline.predict()
+
+        return render_template('home.html',results=results[0])
+
+
+results[0]
+because it will be a list of values returned
+
+
+final app.py:
+from flask import Flask,request,render_template
+import numpy as np
+import pandas as pd
+
+from sklearn.preprocessing import StandardScaler
+from src.pipeline.prediction_pipeline import CustomData,PredictPipeline
+application=Flask(__name__)
+
+app=application
+##route for a home page
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/predictdata',methods=['GET','POST'])
+def predict_datapoint():
+    if request.method=='GET':
+        return render_template('home.html')
+    else:
+        data=CustomData(gender=request.form.get('gender'),
+            race_ethnicity=request.form.get('ethnicity'),
+            parental_level_of_education=request.form.get('parental_level_of_education'),
+            lunch=request.form.get('lunch'),
+            test_preparation_course=request.form.get('test_preparation_course'),
+            reading_score=float(request.form.get('writing_score')),
+            writing_score=float(request.form.get('reading_score')))
+        
+        pred_df=data.get_data_as_data_frame()
+        print(pred_df)
+
+        predict_pipeline=PredictPipeline()
+        results=predict_pipeline.predict()
+
+        return render_template('home.html',results=results[0])
+
+if __name__=="__main__":
+    app.run(host="0.0.0.0", debug=True)
+
+
+now to run this:
+
+python app.py
+
+goto browser and type 127.0.0.1:5000
+
+index.html will show up
+
+now we need to class /predictData
+
+http://127.0.0.1:5000/predictdata
+
+we will get home.html
+
+fill in all values and then submit, our prediction will get printed
+
+SO DONE WITH CREATING A WEB APPLICATION TO RUN OUR MODEL
+
+git add .
+git commit -m "Prediction Pipeline done"
+git push -u origin main
+
+
+
+
+
+
