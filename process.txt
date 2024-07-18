@@ -1685,12 +1685,28 @@ option_settings:
 
 now this tells us the entrypoint, we need to create a separate application.py with same code as app.py but remember to remove debug=True while deploying
 
+git add .
+git commit -m "Deploymeny cpnfig AWS"
+git push -u origin main
+
+
+now next step is to deploy:
+
+1.Create an account on AWS
+2. role:https://stackoverflow.com/questions/30790666/error-with-not-existing-instance-profile-while-trying-to-get-a-django-project-ru
+3. select elastic beanstalk and create application
+4. create pipeline
+5. click on that pipeline which got succeded
+6. click on domain, it is the link to application
+7.now in URL write /predictdata
+8.home.html opens
 
 
 
 
+DONE WITH THE PROJECT
 
-
+THANK-YOU!
 
 
 
