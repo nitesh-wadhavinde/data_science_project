@@ -1615,5 +1615,104 @@ git push -u origin main
 
 
 
+________________________________________________________________________________________________________________________________________________
+
+
+now comes deployment part:
+
+we will first deploy it on Amazon Elastic Beanstalk provided by AWS
+
+
+
+Amazon Elastic Beanstalk is a Platform as a Service (PaaS) provided by Amazon Web Services (AWS) that simplifies the process of deploying, managing, and scaling web applications and services. It abstracts much of the underlying infrastructure, allowing developers to focus on writing code rather than dealing with infrastructure setup and management. Here’s a detailed explanation:
+
+Key Features
+Simplified Deployment:
+
+You can deploy applications quickly by uploading code directly or connecting to a code repository. Elastic Beanstalk takes care of the provisioning of necessary resources like servers, databases, load balancers, etc.
+Automatic Scaling:
+
+Elastic Beanstalk automatically scales your application up or down based on demand. This ensures that your application can handle varying levels of traffic efficiently.
+Monitoring and Health Management:
+
+It provides monitoring capabilities through AWS CloudWatch, enabling you to track the health of your applications and infrastructure. Elastic Beanstalk also automatically handles health checks and can replace unhealthy instances.
+Customizable Environment:
+
+While Elastic Beanstalk abstracts much of the infrastructure, it still allows for custom configurations. You can customize your environment using configuration files to tailor the infrastructure to your needs.
+Multi-language and Multi-platform Support:
+
+It supports a wide range of programming languages and platforms, including Java, .NET, Node.js, PHP, Python, Ruby, Go, and Docker.
+How It Works
+Create an Application:
+
+Define your application and its environment (e.g., web server environment for web applications, worker environment for background jobs).
+Deploy Your Code:
+
+Upload your application code using the Elastic Beanstalk console, CLI, or API. Elastic Beanstalk automatically handles the deployment, from provisioning to load balancing and auto-scaling.
+Manage and Monitor:
+
+Use the Elastic Beanstalk console to manage your application. You can monitor performance metrics, manage environment configurations, and handle updates.
+Scale and Update:
+
+Elastic Beanstalk automatically scales your application based on the defined configuration and updates the environment as needed. You can also manually trigger updates and changes.
+Advantages
+Ease of Use:
+
+Simplifies the deployment process, making it accessible even to those with minimal DevOps experience.
+Focus on Code:
+
+Allows developers to focus on writing code without worrying about the underlying infrastructure.
+Integrated with AWS Ecosystem:
+
+Seamlessly integrates with other AWS services, providing a cohesive and powerful ecosystem for developing, deploying, and managing applications.
+Cost-Effective:
+
+You only pay for the underlying AWS resources used by your application, such as EC2 instances, S3 storage, etc. Elastic Beanstalk itself does not have an additional cost.
+
+____________________
+
+
+there are two important config files we need to set up when we are working with elastic beanstalk
+
+1s extension create a folder:
+.ebextensions
+
+inside it create python.config
+option_settings:
+    "aws:elasticbeanstalk:container:python":
+        WSGIPath: application:application
+
+
+now this tells us the entrypoint, we need to create a separate application.py with same code as app.py but remember to remove debug=True while deploying
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
