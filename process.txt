@@ -871,29 +871,335 @@ python src/components/data_ingestion.py
 
 preprocessor.pkl will get created in artifacts folder
 
+git add .
+git commit -m "data transformation done"
+git push -u origin main
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+now we will start writing code for creating ML model
+
+first we will start with importing required libraries
+
+we need to also import utils from src to use it here
+
+import os
+import sys
+from dataclasses import dataclass
+
+from catboost import CatBoostRegressor
+from sklearn.ensemble import (
+    AdaBoostRegressor,
+    GradientBoostingRegressor,
+    RandomForestRegressor
+
+
+
+)
+from sklearn.linear_model import LinearRegression
+
+from sklearn.metrics import r2_score
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from xgboost import XGBRegressor
+
+
+from src.exception import CustomException
+from src.logger import logging
+
+from src.utils import save_object
 
 
 
 
 
 
+so yo might face issues with some libraries not installed although you run requirements.txt
+solution is to make sure no space in path of project, create new env, activate it and run requirements.txt in it
+and then vscode will you give you suggestion to use this environment terminal, click yes on it
 
 
 
 
 
+now as we did or all components, here too we need a config file:
+so we will create a config file here
+ this will give us input whatever we require for model training
+after creating a model we would want to create it a pickle file
+
+@dataclass
+class ModelTrainerConfig:
+    trained_model_file_path=os.path.join("artifacts","model.pkl")
+
+
+now comes the main class modelTrainer
+
+first basic stuff of init:
+class ModelTrainer:
+    def __init__(self):
+        self.model_trainer_config=ModelTrainerConfig()
+
+
+now we will create a function to initiate model training
+    def initiate_model_trainer(self,train_array,test_array,preprocessor_path):
+
+
+self,train_array,test_array,preprocessor_path these inputs we will get from data transformation component
+
+okay so first step is to get train_arr and test_arr from data transformation
+
+which you can see it returns and the last feature which gets added to them is target
+so to access except target we do train_array[:,:-1] in X_train and for y_train: train_array[:,-1]
+
+
+
+ def initiate_model_trainer(self,train_array,test_array,preprocessor_path):
+        try:
+            logging.info("spliting of data initiated")
+            X_train,y_train,X_test,y_test=(
+                train_array[:,:-1],
+                train_array[:,-1],
+                test_array[:,:-1],
+                test_array[:,-1],
+
+            )
+        except:
+            pass
+
+
+now we will declare our dictionary of models
+  models = {
+                "Random Forest": RandomForestRegressor(),
+                "Decision Tree": DecisionTreeRegressor(),
+                "Gradient Boosting": GradientBoostingRegressor(),
+                "Linear Regression": LinearRegression(),
+                "XGBRegressor": XGBRegressor(),
+                "CatBoosting Regressor": CatBoostRegressor(verbose=False),
+                "AdaBoost Regressor": AdaBoostRegressor(),
+            }
+we can do hyperparameter tuing after this but this is optional
+for example:
+params = {
+                "Decision Tree": {
+                    'criterion': ['squared_error', 'friedman_mse', 'absolute_error', 'poisson'],
+                },
+                "Random Forest": {
+                    'n_estimators': [8, 16, 32, 64, 128, 256]
+                },
+                "Gradient Boosting": {
+                    'learning_rate': [0.1, 0.01, 0.05, 0.001],
+                    'subsample': [0.6, 0.7, 0.75, 0.8, 0.85, 0.9],
+                    'n_estimators': [8, 16, 32, 64, 128, 256]
+                },
+                "Linear Regression": {},
+                "XGBRegressor": {
+                    'learning_rate': [0.1, 0.01, 0.05, 0.001],
+                    'n_estimators': [8, 16, 32, 64, 128, 256]
+                },
+                "CatBoosting Regressor": {
+                    'depth': [6, 8, 10],
+                    'learning_rate': [0.01, 0.05, 0.1],
+                    'iterations': [30, 50, 100]
+                },
+                "AdaBoost Regressor": {
+                    'learning_rate': [0.1, 0.01, 0.5, 0.001],
+                    'n_estimators': [8, 16, 32, 64, 128, 256]
+                }
+            }
 
 
 
 
 
+now to evaluate:
+            model_report:dict=evaluate_model(X_train=X_train, y_train=y_train,X_test=X_test, y_test=y_test)
+
+
+In the line model_report: dict = evaluate_models(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test), the dict after the colon (:) is a type hint. It indicates that the variable model_report is expected to be of type dict (dictionary).
+
+Explanation of Type Hints
+Type hints are a feature introduced in Python 3.5 that allows you to indicate the expected type of a variable. They are used to provide hints to type checkers, IDEs, and readers of the code about what type a variable should be. However, they do not enforce the type at runtime; they are just annotations.
+
+we will create this function: evaluate_model in utils
+
+def evaluate_models(X_train,y_train,X_test,y_test,models):
+    try:
+        report={}
+
+        for i in range(len(list(models))):
+            model=list(models.values())[i]
+
+            model.fit(X_train,y_train) #train model
+
+            y_tain_pred = model.predict(X_train)
+
+            y_test_pred = model.predict(X_test)
+
+            train_model_score= r2_score(y_train,y_tain_pred)
+
+            test_model_score = r2_score(y_test_pred,y_test)
+
+            report[list(models.keys())[i]]= test_model_score
+
+        return report
+    
+    except Exception as e:
+        raise CustomException(e,sys)
 
 
 
 
+now in model trainer component we will find best model
+
+            #to get best model scoe from dict
+            best_model_score=max(sorted(model_report.values()))
+
+            #to get best model name from dict
+            best_model_name= list(model_report.keys())[
+                list(model_report.values()).index(best_model_score)
+            ]
+
+The code finds the name of the model with the highest score in model_report. Here's the step-by-step process in context:
+
+Get the model names as a list: list(model_report.keys())
+
+Example: ['Random Forest', 'Decision Tree', 'Gradient Boosting']
+Get the model scores as a list: list(model_report.values())
+
+Example: [0.75, 0.65, 0.80]
+Find the index of the best score: list(model_report.values()).index(best_model_score)
+
+Assume best_model_score = 0.80. The index of 0.80 in the scores list is 2.
+Get the model name with the best score: list(model_report.keys())[2]
+
+Using the index 2, we get the corresponding model name, which is 'Gradient Boosting'.
 
 
 
+so now the whole code of model trainer looks like this:
+import os
+import sys
+from dataclasses import dataclass
+
+from catboost import CatBoostRegressor
+from sklearn.ensemble import (
+    AdaBoostRegressor,
+    GradientBoostingRegressor,
+    RandomForestRegressor
 
 
 
+)
+from sklearn.linear_model import LinearRegression
+
+from sklearn.metrics import r2_score
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn import Random
+from xgboost import XGBRegressor
+
+
+from src.exception import CustomException
+from src.logger import logging
+
+from src.utils import save_object, evaluate_models
+
+@dataclass
+class ModelTrainerConfig:
+    trained_model_file_path=os.path.join("artifacts","model.pkl")
+
+
+class ModelTrainer:
+    def __init__(self):
+        self.model_trainer_config=ModelTrainerConfig()
+
+    def initiate_model_trainer(self,train_array,test_array,preprocessor_path):
+        try:
+            logging.info("spliting of data initiated")
+            X_train,y_train,X_test,y_test=(
+                train_array[:,:-1],
+                train_array[:,-1],
+                test_array[:,:-1],
+                test_array[:,-1],
+
+            )
+
+            models = {
+                "Random Forest": RandomForestRegressor(),
+                "Decision Tree": DecisionTreeRegressor(),
+                "Gradient Boosting": GradientBoostingRegressor(),
+                "Linear Regression": LinearRegression(),
+                "K-Neighbors Classifier": KNeighborsRegressor(),  
+                "XGBRegressor": XGBRegressor(),
+                "CatBoosting Regressor": CatBoostRegressor(verbose=False),
+                "AdaBoost Regressor": AdaBoostRegressor(),
+            }
+
+            model_report:dict=evaluate_models(X_train=X_train, y_train=y_train,X_test=X_test, y_test=y_test)
+
+            #to get best model scoe from dict
+            best_model_score=max(sorted(model_report.values()))
+
+            #to get best model name from dict
+            best_model_name= list(model_report.keys())[
+                list(model_report.values()).index(best_model_score)
+            ]
+
+
+            best_model=models[best_model_name]
+
+
+            if best_model_score<0.6:
+                raise CustomException("No best model found")
+            
+
+            logging.info("Best model found")
+
+            
+            save_object(
+                file_path=self.model_trainer_config.trained_model_file_path,
+                obj=best_model
+            )
+
+
+            predicted=best_model.predict(X_test)
+
+            r2Score=r2_score(y_test,predicted)
+
+            return r2Score
+        except Exception as e:
+            raise CustomException(e,sys)
+
+
+now to test this goto dataingestion file
+
+from src.components.model_trainer import ModelTrainerConfig
+from src.components.model_trainer import ModelTrainer
+
+if __name__=="__main__":
+    obj=DataIngestion()
+    train_data,test_data=obj.initiate_data_ingestion()
+
+    data_transformation=DataTransformation()
+    train_array,test_array,=data_transformation.initiate_data_transformation(train_data,test_data)
+    modelTrainer=ModelTrainer()
+    print(modelTrainer.initiate_model_trainer(train_array,test_array))
+
+
+now to run:
+
+python src/components/data_ingestion.py
+
+i f it shows src not found then on top of data ingestion file put this
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+
+
+finally we got r score:
+PS C:\Users\Nitesh\iitRopar\CDPC\DataScientistInterview\dataScienceProject> python src/components/data_ingestion.py
+Random Forest
+0.8934170877396435
