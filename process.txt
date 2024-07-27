@@ -1710,11 +1710,98 @@ THANK-YOU!
 
 
 
+//////////////////////////////////////////
+TO RUN ON WSL LOCALLY
+Steps to Run Your Flask Application in WSL
+Open Ubuntu in WSL:
+
+Launch Ubuntu from your Start menu or type wsl in a PowerShell or Command Prompt window.
+Navigate to Your Project Directory:
+
+Use the cd command to navigate to the directory where your project is located. If your project is on your Windows desktop, the path would typically be something like /mnt/c/Users/YourUsername/Desktop/YourProjectFolder. For example:
+bash
+Copy code
+cd /mnt/c/Users/Nitesh/Desktop/YourProjectFolder
+Create and Activate a Virtual Environment:
+
+Create a virtual environment in your project directory:
+bash
+Copy code
+python3 -m venv venv
+Activate the virtual environment:
+bash
+Copy code
+source venv/bin/activate
+Install Dependencies:
+
+Make sure you have a requirements.txt file in your project directory. If you do, install the necessary packages:
+bash
+Copy code
+pip install -r requirements.txt
+If you don't have a requirements.txt, you can manually install Flask and other required packages:
+bash
+Copy code
+pip install flask pandas scikit-learn  # Add any other packages you need
+Run Your Flask Application:
+
+Start your Flask application by running:
+bash
+Copy code
+python application.py
+By default, Flask runs on port 5000. However, WSL 2 has a different network configuration compared to WSL 1. To make your Flask application accessible from your Windows host, you need to bind it to all network interfaces (0.0.0.0). Modify your application.py to include this configuration if it's not already present:
+python
+Copy code
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
+Access Your Application from Windows:
+
+Open a web browser in Windows and go to http://localhost:5000 to see your Flask application running.
 
 
 
+##############################################
+
+so the error of internal server was due to wrong handling of pkl file. It was hard coded for windows so it didn't work on servers like azure and amazon elastic beanstalk because they are Linux machines in backend.
+
+wrong handling:
+
+class PredictPipeline:
+    def __init__(self):
+        pass
+
+    def predict(self,features):
+        try:
+            model_path='artifacts\model.pkl'
+            preprocessor_path='artifacts\preprocessor.pkl'
+            model=load_object(file_path=model_path)
+            preprocessor=load_object(file_path=preprocessor_path)
+
+            data_scaled=preprocessor.transform(features)
+            preds=model.predict(data_scaled)
+            return preds
+        except Exception as e:
+         raise CustomException(e,sys) 
 
 
+correct handling:
+class PredictPipeline:
+    def __init__(self):
+        pass
+
+    def predict(self,features):
+        try:
+            model_path=os.path.join("artifacts","model.pkl")
+            preprocessor_path=os.path.join('artifacts','preprocessor.pkl')
+            print("Before Loading")
+            model=load_object(file_path=model_path)
+            preprocessor=load_object(file_path=preprocessor_path)
+            print("After Loading")
+            data_scaled=preprocessor.transform(features)
+            preds=model.predict(data_scaled)
+            return preds
+        
+        except Exception as e:
+            raise CustomException(e,sys)
 
 
 
